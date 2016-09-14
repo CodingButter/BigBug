@@ -1,0 +1,579 @@
+<html>
+<head>
+	<title>Big Bug</title>
+	<script src="http://code.jquery.com/jquery-latest.min.js"></script>
+	<script src="/socket.io/socket.io.js"></script>
+	<style>
+		body,html,#sea{
+			box-sizing:border-box;
+			margin:0;
+			padding:0;
+			width:100%;
+			height:100%;
+			position:relative;
+			overflow:hidden;
+		}
+		body{
+			background:url('./images/pondbed.jpg') repeat;
+			background-size:20%;
+		}
+		.entity{
+			position:absolute;
+		}
+		#sea{
+			overflow:hidden;
+			background:url('./images/hexmap.png') repeat;
+			background-size:200%;
+		}
+		.bugy{
+			border-radius:50%;
+		}
+		.bugy .shadow {
+			border-radius: 50%;
+			width: 100%;
+			height: 100%;
+			position: absolute;
+			background: -moz-radial-gradient(center, ellipse cover, rgba(255,255,255,0.07) 21%, rgba(255,255,255,0.11) 24%, rgba(0,0,0,0.51) 58%, rgba(0,0,0,0.52) 59%, rgba(0,0,0,0.7) 78%, rgba(0,0,0,0.74) 82%);
+			background: -webkit-radial-gradient(center, ellipse cover, rgba(255,255,255,0.07) 21%,rgba(255,255,255,0.11) 24%,rgba(0,0,0,0.51) 58%,rgba(0,0,0,0.52) 59%,rgba(0,0,0,0.7) 78%,rgba(0,0,0,0.74) 82%);
+			background: radial-gradient(ellipse at center, rgba(255,255,255,0.07) 21%,rgba(255,255,255,0.11) 24%,rgba(0,0,0,0.51) 58%,rgba(0,0,0,0.52) 59%,rgba(0,0,0,0.7) 78%,rgba(0,0,0,0.74) 82%);
+			filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#12ffffff', endColorstr='#bd000000',GradientType=1 );
+		}
+		.me {
+			z-index:1000;
+		}
+		.eye {
+			background: url('./images/bugeye.png');
+			background-size: 76%;
+			background-repeat: no-repeat;
+			width: 50%;
+			height: 47%;
+			position: absolute;
+			right: -1%;
+		}
+		.left-eye {
+			top: -10%;
+			transform: rotateZ(-55deg);
+		}
+
+		.right-eye {
+			bottom: -5%;
+			transform: rotateZ(55deg);
+		}
+		.skin {
+			width: 100%;
+			height: 100%;
+			position: absolute;
+			border-radius: 50%;
+		}
+
+		.tail {
+			width: 150%;
+			height: 65%;
+			position: absolute;
+			left: -70%;
+			top: 17%;
+		}
+		
+		.name {
+			
+			width:200px;
+			margin-left:50px;
+			font-size: 30px;
+			display:block;
+			position:absolute;
+			z-index:0;
+			color:black;
+			padding:3px 0px;
+			text-align:center;
+			background:rgba(255,255,255,.5);
+			border-radius:5px;
+			border:2px solid black;
+		}
+		input.name{
+			opacity:1
+		}
+		#ranking {
+			position: absolute;
+			left: 10px;
+			top: 10px;
+			z-index: 100;
+		}
+		li.item {
+			display: block;
+			padding: 6px;
+			background: white;
+			margin: 10px;
+			border: 1px solid black;
+			border-radius: 3px;
+			font-size: 21px;
+			text-align: left;
+		}
+		.arrow {
+			position: absolute;
+			font-size: 25px;
+			background:white;
+			width:30px;
+			height:30px;
+			text-align:center;
+			border-radius:50%;
+			margin-top:-25px;
+			right:-25px;
+			border:1px solid black;      
+		}
+		div#msg {
+			display:none;
+			width: 300px;
+			padding: 10px;
+			background: white;
+			border-radius: 5px;
+			border: 2px solid black;
+			position: fixed;
+			top: 50%;
+			transform: translate(-50%);
+			left: 50%;
+			z-index:5000;
+			box-shadow: 0px 0px 12px 5px rgba(0,0,0,0.3);
+		}
+	</style>
+	</head>
+<body>
+	<div class="container">
+		<div id="msg">
+			<p id="status">Server Message: You kinda suck</p>
+			<p id="fix">Fix: Don't be a dick</p>
+		</div>
+		<div id='ranking'></div>
+		<div id='sea'>
+		</div>
+	</div>
+	<script>
+	    //Define Right away
+		var secret = {};
+	(function(){
+		var keys = [];
+		var left=37;
+		var up = 38;
+		var right = 39;
+		var down = 40;
+		var a = 65;
+		var s = 83;
+		var w = 87;
+		var d = 68;
+		var shift = 16;
+		var enter = 13;
+		var boost = true;
+	    var sea = $("#sea");
+		var me = {}; //define controllable bug
+	    var bugies = {};
+		var bugarray = [];
+		var offsetX = 0;
+		var offsetY = 0;
+		var tilter = false;
+		var accel = false;
+		var ranklist;
+		var centerX = $(window).width()/2;
+		var centerY = $(window).height()/2;
+		var msg = $("#msg");
+	    var DEFAULTS = {
+	        width: 100,
+	        height: 100
+	    };
+		
+		 //SOCKET STUFF
+	    var socket = io.connect();
+		secret.s = socket;
+	    socket.on('start', init);
+		socket.on('force disconnect',forceDisconnect);
+	    socket.on('bugy added', addBugy);
+		socket.on('update a bug',updateBug);
+		socket.on('request update',function(){if(me)updateMe();});
+		socket.on('remove bug',function(bugid){removeBug(bugid);});
+		function updateMe(){socket.emit('update bug',me);}
+		function removeMe(){socket.emit('remove bug',me);}
+		function requestUpdate(){	socket.emit('request update');}
+		$(window).on('beforeunload',function(){
+			return "are you sure you want to leave";
+		});
+		$(window).unload(function(){
+			socket.disconnect();
+			return "Bye";
+		});
+	   
+		function forceDisconnect(data){
+			$("title").html("Booted");
+			$("#msg #status").html("Server Message: " + data.reason);
+			$("#msg #fix").html("Fix: "+data.fix);
+			msg.show();
+			bugies = {};
+			me = {};
+			$(".entity").remove();
+		}
+		
+	    function init(data,name,x,y) {
+			//console.log("added you to the bugies");
+			console.log(socket.id);
+			bugies = {};
+			var x = x || 0;
+			var y = y || 0;
+	        me = new bug(x, y, socket.id);
+			me.elm.addClass("me");
+			me.name = name || "Buggy";
+			bugarray.push(me);
+			console.log(me);
+	        socket.emit("add bugy", me);
+			for (var property in data) {
+				if (data.hasOwnProperty(property)) {
+					addBugy(data[property]);
+				}
+			}
+			secret.me = me;
+			setInterval(tick,12);
+	    }
+		
+		function removeBug(bugid){
+			if(bugid != me.id){
+				bugarray.splice(bugarray.indexOf(bugies[bugid]),1);
+				bugies[bugid].elm.remove();
+				delete bugies[bugid];
+			}
+		}
+		
+		function addBugy(fdata) {
+			console.log(fdata,me);
+			if(fdata.id != me.id){	
+				//console.log(fdata);
+				bugies[fdata.id] = new bug(fdata.x, fdata.y, fdata.id);
+				bugarray.push(bugies[fdata.id]);
+				updateBug(fdata);
+			}
+	    }
+		
+		function gameLoop(){
+			for (var property in bugies) {
+				if (bugies.hasOwnProperty(property)) {
+					bugies[property].render();
+				}
+			}
+			$('body').css({
+				'background-position-x':(-offsetX)+"px",
+				'background-position-y':(-offsetY)+"px",
+			});
+			
+			$('#sea').css({
+				'background-position-x':-offsetX+"px",
+				'background-position-y':-offsetY+"px",
+			});
+			
+			
+			$("#ranking").html(ranklist);
+			window.requestAnimationFrame(gameLoop);
+		}
+		
+		function tick(){
+			offsetX = me.x - centerX;
+			offsetY = me.y - centerY;	
+			bugarray = bugarray.sort(function(a,b){
+				if(a.size > b.size){
+				  return -1;
+				}else if(a.size<b.size){
+					return 1;
+				}else{
+					return 0;
+				}
+			});
+			ranklist = $("<ul id='ranklist'/>");
+			for(var i=0;i<bugarray.length;i++){
+				var li = $("<li class='item'>"+bugarray[i].name+"</li>");
+				if(bugarray[i]!==me){
+					var arrow = $("<div class='arrow'>></div>");
+					arrow.css({
+						transform:"rotateZ("+getAngle(me,bugarray[i])+"deg)"
+					});
+					li.append(arrow);
+				}
+				ranklist.append(li);
+			}
+
+			for (var property in bugies) {
+				if (bugies.hasOwnProperty(property)) {
+					var f = bugies[property];
+						if(me !==f){
+							if(Math.floor(f.width)>Math.floor(me.width)){
+								if(checkCollision(me,f)){
+									me.moveX = 0;
+									me.moveY = 0;
+									me.accelX = 0;
+									me.accelY = 0;
+									me.cancollide = false;
+									me.die();
+									updateMe();
+								}
+								
+							}
+							if(Math.floor(f.width)<Math.floor(me.width)){
+								if(checkCollision(me,f)){
+									me.size += me.size/20;
+									$(f.elm).remove();
+									bugies[f.id] = new bug(f.x,f.y,f.id);
+									updateMe();
+								}
+								
+							}
+						}
+					
+
+					//tick bug
+					f.tick();
+				}
+			}
+		}
+		gameLoop();
+
+		
+		//Check collissions
+		function checkCollision(a,b){
+			if(a.cancollide && b.cancollide){
+				if((a.width/2) + (b.width/2) >= a.getDist(b)){
+					return true;
+				}
+			}
+			return false;
+		}
+		
+		//Update a buges data
+		function updateBug(fd){
+			if(fd.id != me.id){
+				////console.log("updated a bugy");
+				var ubug = bugies[fd.id];
+				ubug.x = fd.x;
+				ubug.y = fd.y;
+				ubug.name = fd.name;
+				ubug.width = fd.width;
+				ubug.height = fd.height;
+				ubug.layer = fd.layer;
+				ubug.size = fd.size;
+				ubug.speed  = fd.speed;
+				ubug.moveX = fd.moveX;
+				ubug.moveY = fd.moveY;	
+				ubug.friction = fd.friction;
+			}				
+		}
+		
+	
+		
+		//Bug Class
+	    var bug = function(_x, _y, _id,_name) {
+	        bugies[_id] = this;
+			this.x = _x;
+			this.y = _y;		
+			this.width = DEFAULTS.width;
+			this.height = DEFAULTS.height;
+			this.id = _id;
+			this.name = _name || this.name;
+			this.set = function(){
+				var T = this;
+				
+		
+				this.elm = $("<div class='bugy'/>");
+				this.elm.on("click",function(e){
+					if(T==me){
+						if(T.inp && e.target!=T.inp){
+							T.name = T.inp.val();
+							T.inp.remove();
+							delete T.inp;
+						}else{	
+							T.inp = $("<input type='text' class='name' placeholder='bug name'/>");
+							T.inp.on('keydown',function(e){
+								if(e.which==enter){
+									T.name = $(this).val();
+									this.remove();
+								}
+							});
+							T.elm.append(T.inp);
+							T.inp.focus();
+						}
+					}
+				});
+				this.elm.addClass("entity");
+				this.elm.attr("title", this.id);
+				this.nametip = $("<div class='name'/>");
+				this.elm.append(this.nametip);
+				this.layer = 0;
+				this.size = 1;
+				this.shrinkrate = .99999;
+				this.speed = 0.095;
+				this.friction = .97;
+				this.moveX = 0;
+				this.moveY = 0;
+				this.accelX = 0;
+				this.accelY = 0;
+				this.cancollide = false;
+				this.skin = $("<div class='skin'/>");
+				this.elm.append(this.skin);
+				console.log
+				sea.append(this.elm);
+				setTimeout(function(){
+				T.cancollide = true;
+				updateMe();
+			},10000);
+			}
+			this.set();
+			this.getDir = function(){
+				return Math.atan2(this.accelY,this.accelX) * 180/Math.PI;
+			}
+			
+			
+			this.die = function(){
+				if(this==me){
+					this.elm.remove();
+					this.set();
+				}
+			}
+	        //main render
+	        this.render = function() {
+				$("title").html("Big Bug " +bugarray.length);
+				if(this.name!='')this.nametip.show();
+				else this.nametip.hide();
+				if(this.inp){
+					this.inp.css({
+						transform:"rotateZ("+(-this.getDir())+"deg)"
+					})
+				}
+				this.nametip.css({
+					transform:"rotateZ("+ (-this.getDir())+"deg)"
+				})
+				this.elm.css({
+					left: (this.x - offsetX) + "px",
+					top: (this.y - offsetY) + "px",
+					marginLeft:"-"+(this.width/2)+"px",
+					marginTop:"-"+(this.width/2)+"px",
+					width: this.width + "px",
+					height: this.height + "px",
+					opacity:(this.cancollide)?1:0.5,
+					transform:"rotateZ("+this.getDir()+"deg)"
+				});
+				var bg = getBugy(this.size);
+				this.skin.css({
+					backgroundImage: bg,
+					backgroundSize:"100%"
+				});
+				centerX = $(window).width()/2;
+				centerY = $(window).height()/2;
+			}
+			
+	            //main tick
+	        this.tick = function() {
+				this.nametip.html(this.name);
+				this.accelX += this.moveX  * this.speed;
+				this.accelY += this.moveY  * this.speed;
+				this.x += this.accelX;
+				this.y += this.accelY;
+				this.accelX *= this.friction;
+				this.accelY *= this.friction;
+				this.size *= this.shrinkrate;
+				this.size +=Math.sqrt(this.accelX*this.accelX + this.accelY*this.accelY)/60000;
+				this.width  = DEFAULTS.width * this.size;
+				this.height = DEFAULTS.height * this.size;
+				if(this.size < .75)this.die();
+			}
+			this.tick();
+			this.render();
+			
+			this.getDist = function(ent){
+				var distx = this.x - ent.x;
+				var disty = this.y - ent.y;
+				return Math.sqrt(distx * distx + disty * disty);
+			}
+	    }
+		
+		function getAngle(a,b){
+			var dirX = b.x - a.x;
+			var dirY = b.y - a.y;
+			return Math.atan2(dirY,dirX) * 180/Math.PI;
+		}
+		
+	    function getBugy(_s) {
+	        return "url('./images/lady_bug.png')";
+	    }
+		
+		/*
+		* CONTROLS
+		*/
+		
+		//PC CONTROLS
+		document.addEventListener('keydown',function(e){
+			if(!keys[e.which] && !tilter){
+				keys[e.which] = true;
+				if(keys[left] || keys[a] )me.moveX = -1;
+				else if(keys[right] || keys[d])me.moveX = 1;
+				if(keys[up] || keys[w])me.moveY = -1;
+				else if(keys[down] || keys[s])me.moveY = 1;
+				if(keys[shift] && boost){
+					boost = false;
+					me.moveX *= 2.5;
+					me.moveY *= 2.5;
+				}
+				updateMe();
+			}
+		},1);
+		
+		document.addEventListener('keyup',function(e){
+			keys[e.which] = false;
+			//console.log(keys);
+			boost = true;
+			if(!tilter){
+				if(keys[left]!=true && keys[right]!=true && keys[a]!=true && keys[d]!=true)me.moveX = 0;
+				if(keys[up]!=true && keys[down]!=true && keys[w] !=true && keys[s]!=true)me.moveY = 0;
+				updateMe();
+			}
+		},1);
+		
+		//TOUCH SCREEN
+		$('body')[0].addEventListener('touchstart',startTouch,false);
+		function startTouch(evt){
+			evt.preventDefault();
+			var touch = evt.touches[0];
+			me.moveX = Math.abs(touch.pageX - centerX)/(touch.pageX - centerX);
+			me.moveY = Math.abs(touch.pageY - centerY)/(touch.pageY - centerY);
+			
+			updateMe();
+		}
+		
+		$('body')[0].addEventListener('touchmove',function(evt){
+			var touch = evt.touches[0];
+			me.moveX = Math.abs(touch.pageX - centerX)/(touch.pageX - centerX);
+			me.moveY = Math.abs(touch.pageY - centerY)/(touch.pageY - centerY);
+			updateMe();
+		},false);
+
+		$('body')[0].addEventListener('touchend',function(evt){
+			me.moveX = 0;
+			me.moveY = 0;
+			updateMe();
+		},false);
+		
+		//ACCELEROMETER CONTROLS
+        if(accel==true){
+			if (window.DeviceOrientationEvent) {
+				window.addEventListener("deviceorientation", function () {
+					tilt([event.beta, event.gamma]);
+				}, true);
+			} else if (window.DeviceMotionEvent) {
+				window.addEventListener('devicemotion', function () {
+					tilt([event.acceleration.x * 2, event.acceleration.y * 2]);
+				}, true);
+			} else {
+				window.addEventListener("MozOrientation", function () {
+					tilt([orientation.x * 50, orientation.y * 50]);
+				}, true);
+			}
+		}
+		function tilt(pos){
+			me.moveX -=(me.moveX - (pos[1]/50))/7;
+			me.moveY -=(me.moveY - (pos[0]/50))/7;
+			updateMe();
+		}
+		})();
+	</script>
+</body>
+</html>
