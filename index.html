@@ -4,7 +4,7 @@
 	<script src="http://code.jquery.com/jquery-latest.min.js"></script>
 	<script src="/socket.io/socket.io.js"></script>
 	<style>
-		body,html,#sea{
+		body,html,#dirt{
 			box-sizing:border-box;
 			margin:0;
 			padding:0;
@@ -20,7 +20,7 @@
 		.entity{
 			position:absolute;
 		}
-		#sea{
+		#dirt{
 			overflow:hidden;
 			background:url('./images/hexmap.png') repeat;
 			background-size:200%;
@@ -139,11 +139,11 @@
 <body>
 	<div class="container">
 		<div id="msg">
-			<p id="status">Server Message: You kinda suck</p>
-			<p id="fix">Fix: Don't be a dick</p>
+			<p id="status"></p>
+			<p id="fix"></p>
 		</div>
 		<div id='ranking'></div>
-		<div id='sea'>
+		<div id='dirt'>
 		</div>
 	</div>
 	<script>
@@ -162,7 +162,7 @@
 		var shift = 16;
 		var enter = 13;
 		var boost = true;
-	    var sea = $("#sea");
+	    var dirt = $("#dirt");
 		var me = {}; //define controllable bug
 	    var bugies = {};
 		var bugarray = [];
@@ -259,7 +259,7 @@
 				'background-position-y':(-offsetY)+"px",
 			});
 			
-			$('#sea').css({
+			$('#dirt').css({
 				'background-position-x':-offsetX+"px",
 				'background-position-y':-offsetY+"px",
 			});
@@ -270,6 +270,12 @@
 		}
 		
 		function tick(){
+							
+			if(keys[left] || keys[a])me.rotation-=me.rotspeed;
+			if(keys[right] || keys[d])me.rotation +=me.rotspeed;
+			if((keys[up] || keys[w]) && Math.abs(me.speed)<me.maxspeed)me.speed += me.accel;
+			if((keys[down] || keys[s]) && Math.abs(me.speed)<me.maxspeed)me.speed -=me.accel;
+			if(keys[up]!=true && keys[down]!=true && keys[w] != true && keys[s]!=true)me.speed *= me.friction;
 			offsetX = me.x - centerX;
 			offsetY = me.y - centerY;	
 			bugarray = bugarray.sort(function(a,b){
@@ -281,6 +287,7 @@
 					return 0;
 				}
 			});
+	
 			ranklist = $("<ul id='ranklist'/>");
 			for(var i=0;i<bugarray.length;i++){
 				var li = $("<li class='item'>"+bugarray[i].name+"</li>");
@@ -300,10 +307,7 @@
 						if(me !==f){
 							if(Math.floor(f.width)>Math.floor(me.width)){
 								if(checkCollision(me,f)){
-									me.moveX = 0;
-									me.moveY = 0;
-									me.accelX = 0;
-									me.accelY = 0;
+									me.speed = 0;
 									me.cancollide = false;
 									me.die();
 									updateMe();
@@ -401,17 +405,17 @@
 				this.layer = 0;
 				this.size = 1;
 				this.shrinkrate = .99999;
-				this.speed = 0.095;
+				this.speed = 0;
 				this.friction = .97;
-				this.moveX = 0;
-				this.moveY = 0;
-				this.accelX = 0;
-				this.accelY = 0;
+				this.rotation = 0;
+				this.rotspeed = 1;
+				this.accel = .06;
+				this.maxspeed = 6;
 				this.cancollide = false;
 				this.skin = $("<div class='skin'/>");
 				this.elm.append(this.skin);
 				console.log
-				sea.append(this.elm);
+				dirt.append(this.elm);
 				setTimeout(function(){
 				T.cancollide = true;
 				updateMe();
@@ -436,11 +440,11 @@
 				else this.nametip.hide();
 				if(this.inp){
 					this.inp.css({
-						transform:"rotateZ("+(-this.getDir())+"deg)"
+						transform:"rotateZ("+(-this.rotation)+"deg)"
 					})
 				}
 				this.nametip.css({
-					transform:"rotateZ("+ (-this.getDir())+"deg)"
+					transform:"rotateZ("+ (-this.rotation)+"deg)"
 				})
 				this.elm.css({
 					left: (this.x - offsetX) + "px",
@@ -450,7 +454,7 @@
 					width: this.width + "px",
 					height: this.height + "px",
 					opacity:(this.cancollide)?1:0.5,
-					transform:"rotateZ("+this.getDir()+"deg)"
+					transform:"rotateZ("+this.rotation+"deg)"
 				});
 				var bg = getBugy(this.size);
 				this.skin.css({
@@ -463,15 +467,13 @@
 			
 	            //main tick
 	        this.tick = function() {
+				this.rotspeed = 2 + Math.abs(this.speed/3);
 				this.nametip.html(this.name);
-				this.accelX += this.moveX  * this.speed;
-				this.accelY += this.moveY  * this.speed;
-				this.x += this.accelX;
-				this.y += this.accelY;
-				this.accelX *= this.friction;
-				this.accelY *= this.friction;
+				this.x +=  Math.cos(this.rotation*(Math.PI/180)) * this.speed;
+				this.y +=  Math.sin(this.rotation*(Math.PI/180)) * this.speed;
+				
 				this.size *= this.shrinkrate;
-				this.size +=Math.sqrt(this.accelX*this.accelX + this.accelY*this.accelY)/60000;
+				this.size += this.accel/60000;
 				this.width  = DEFAULTS.width * this.size;
 				this.height = DEFAULTS.height * this.size;
 				if(this.size < .75)this.die();
@@ -502,30 +504,13 @@
 		
 		//PC CONTROLS
 		document.addEventListener('keydown',function(e){
-			if(!keys[e.which] && !tilter){
-				keys[e.which] = true;
-				if(keys[left] || keys[a] )me.moveX = -1;
-				else if(keys[right] || keys[d])me.moveX = 1;
-				if(keys[up] || keys[w])me.moveY = -1;
-				else if(keys[down] || keys[s])me.moveY = 1;
-				if(keys[shift] && boost){
-					boost = false;
-					me.moveX *= 2.5;
-					me.moveY *= 2.5;
-				}
-				updateMe();
-			}
+			keys[e.which] = true;
+			updateMe();
 		},1);
 		
 		document.addEventListener('keyup',function(e){
 			keys[e.which] = false;
-			//console.log(keys);
-			boost = true;
-			if(!tilter){
-				if(keys[left]!=true && keys[right]!=true && keys[a]!=true && keys[d]!=true)me.moveX = 0;
-				if(keys[up]!=true && keys[down]!=true && keys[w] !=true && keys[s]!=true)me.moveY = 0;
-				updateMe();
-			}
+			updateMe();
 		},1);
 		
 		//TOUCH SCREEN
@@ -541,13 +526,12 @@
 		
 		$('body')[0].addEventListener('touchmove',function(evt){
 			var touch = evt.touches[0];
-			me.moveX = Math.abs(touch.pageX - centerX)/(touch.pageX - centerX);
+			me.rotation = Math.atan2(touch.pageX - centerX)/(touch.pageX - centerX);
 			me.moveY = Math.abs(touch.pageY - centerY)/(touch.pageY - centerY);
 			updateMe();
 		},false);
 
 		$('body')[0].addEventListener('touchend',function(evt){
-			me.moveX = 0;
 			me.moveY = 0;
 			updateMe();
 		},false);
