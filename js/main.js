@@ -283,38 +283,10 @@ var secret = {};
         bugies[_id] = this;
         this.x = _x;
         this.y = _y;
-        this.width = DEFAULTS.width;
-        this.height = DEFAULTS.height;
         this.id = _id;
         this.name = _name || this.name;
         this.set = function() {
             var T = this;
-            this.elm = $("<div class='bugy'/>");
-            this.elm.on("click", function(e) {
-                if (T == me) {
-                    if (T.inp && e.target != T.inp) {
-                        T.name = T.inp.val();
-                        T.inp.remove();
-                        delete T.inp;
-                    } else {
-                        T.inp = $("<input type='text' class='name' placeholder='bug name'/>");
-                        T.inp.on('keydown', function(e) {
-                            if (e.which == enter) {
-                                T.name = $(this).val();
-                                this.remove();
-                            }
-                        });
-                        T.elm.append(T.inp);
-                        T.inp.focus();
-                    }
-                }
-            });
-            this.elm.addClass("entity");
-            this.elm.attr("title", this.id);
-            this.nametip = $("<div class='name'/>");
-            this.elm.append(this.nametip);
-            this.layer = 0;
-            this.size = 1;
             this.shrinkrate = .99999;
             this.speed = 0;
             this.rotRate = 2.5;
@@ -326,15 +298,43 @@ var secret = {};
             this.accelRate = 0.5;
             this.maxspeed = 15;
             this.cancollide = false;
-            this.skin = $("<div class='skin'/>");
-            this.elm.append(this.skin);
-            dirt.append(this.elm);
-            setTimeout(function() {
-                T.cancollide = true;
-                updateMe();
-            }, 10000);
-        };
+            this.width = DEFAULTS.width;
+            this.height = DEFAULTS.height;
+        }
         this.set();
+        this.elm = $("<div class='bugy'/>");
+        this.elm.on("click", function(e) {
+            if (T == me) {
+                if (T.inp && e.target != T.inp) {
+                    T.name = T.inp.val();
+                    T.inp.remove();
+                    delete T.inp;
+                } else {
+                    T.inp = $("<input type='text' class='name' placeholder='bug name'/>");
+                    T.inp.on('keydown', function(e) {
+                        if (e.which == enter) {
+                            T.name = $(this).val();
+                            this.remove();
+                        }
+                    });
+                    T.elm.append(T.inp);
+                    T.inp.focus();
+                }
+            }
+        });
+
+        this.elm.addClass("entity");
+        this.elm.attr("title", this.id);
+        this.nametip = $("<div class='name'/>");
+        this.elm.append(this.nametip);
+        this.skin = $("<div class='skin'/>");
+        this.elm.append(this.skin);
+        dirt.append(this.elm);
+        setTimeout(function() {
+            T.cancollide = true;
+            updateMe();
+        }, 10000);
+
         this.getDir = function() {
             return Math.atan2(this.accelY, this.accelX) * 180 / Math.PI;
         };
@@ -342,7 +342,6 @@ var secret = {};
 
         this.die = function() {
             if (this == me) {
-                this.elm.remove();
                 this.set();
             }
         };
