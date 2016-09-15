@@ -2,7 +2,7 @@ var express= require('express');
 var app = express();
 var server = require('http').createServer(app);
 var io  = require('socket.io').listen(server);
-var bootTime = 60;
+var bootTime = 800;
 var requestRate = 30;
 requestRate *= 1000;
 bootTime*=1000;
@@ -71,7 +71,7 @@ io.sockets.on('connection',function(socket){
 	
 	socket.on('request update',function(){
 		io.sockets.emit('request update');
-	})
+	});
 	function bootBug(r,f){
 		socket.emit("force disconnect",{reason:r,fix:f});
 		socket.disconnect();
