@@ -108,9 +108,8 @@ var secret = {};
      */
 
     function init(server_bugs) {
-        me = new bug(spawn.x - spawn.width + Math.random() * (spawn.width * 2), spawn.y - spawn.height + Math.random() * (spawn.height * 2), socket.id);
+        me = new bug(spawn.x - spawn.width + Math.random() * (spawn.width * 2), spawn.y - spawn.height + Math.random() * (spawn.height * 2), socket.id,"Guest Buggy");
         me.elm.addClass("me");
-        me.name = name || "Guest Buggy";
         secret.me = me;
         bugarray.push(me);
         socket.emit("add bugy", me);
@@ -281,14 +280,15 @@ var secret = {};
     //Bug Class
     var bug = function(_x, _y, _id, _name) {
         bugies[_id] = this;
+        var T = this;
         this.x = _x;
         this.y = _y;
         this.id = _id;
         this.name = _name || this.name;
         this.set = function() {
-            var T = this;
             this.shrinkrate = .99999;
             this.speed = 0;
+            this.rotRate = 2.5;
             this.rotRate = 2.5;
             this.friction = 0;
             this.frictionAmt = .97;
@@ -297,10 +297,16 @@ var secret = {};
             this.accel = 0;
             this.accelRate = 0.5;
             this.maxspeed = 15;
-            this.cancollide = false;
+            this.size = 1;
             this.width = DEFAULTS.width;
             this.height = DEFAULTS.height;
-        }
+            this.cancollide = false;
+            setTimeout(function() {
+                T.cancollide = true;
+                updateMe();
+            }, 10000);
+
+        };
         this.set();
         this.elm = $("<div class='bugy'/>");
         this.elm.on("click", function(e) {
@@ -330,10 +336,6 @@ var secret = {};
         this.skin = $("<div class='skin'/>");
         this.elm.append(this.skin);
         dirt.append(this.elm);
-        setTimeout(function() {
-            T.cancollide = true;
-            updateMe();
-        }, 10000);
 
         this.getDir = function() {
             return Math.atan2(this.accelY, this.accelX) * 180 / Math.PI;
@@ -401,6 +403,8 @@ var secret = {};
             var disty = this.y - ent.y;
             return Math.sqrt(distx * distx + disty * disty);
         }
+
+        console.log(this);
     };
 
     function getAngle(a, b) {
@@ -410,7 +414,7 @@ var secret = {};
     }
 
     function getBugy(_s) {
-        return "url('./images/lady_bug.png')";
+        return "url(./images/lady_bug.png)";
     }
 
     /*
