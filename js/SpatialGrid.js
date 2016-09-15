@@ -2,35 +2,35 @@
  * Created by Jamie Nichols on 12/19/2015.
  */
 (function(){
-   var x, y,width,height,size,grid;
-    var SpatialGrid = function(_x,_y,_width,_height,_size){
+   var width,height,size,grid,camera;
+    var SpatialGrid = function(_camera,_width,_height,_size){
         var obj = {
-            init: function (_width, _height, _size) {
-                x = _x;
-                y = _y;
+            init: function (_camera,_width, _height, _size) {
                 width = parseInt(_width / _size);
                 height = parseInt(_height / _size);
                 size = _size;
                 grid = [];
                 for (var i = 0; i <= width; i++) {
                     grid[i] = [];
-                    for (var j = 0; j <= y+height; j++) {
+                    for (var j = 0; j <= height; j++) {
                         grid[i][j] = [];
                     }
                 }
             },
             //Insert Entities in GridSquare
             insert: function (_rect, _ent) {
-                var startX = Math.max(x, parseInt(_rect.x / size));
-                var startY = Math.max(y, parseInt(_rect.y / size));
-                var endX = Math.min(x+width, parseInt((_rect.x + _rect.width) / size));
-                var endY = Math.min(y+height, parseInt((_rect.y + _rect.height) / size));
-                for (var ly = startY; ly <= endY; ly++) {
-                    for (var lx = startX; lx <= endX; x++) {
-                        if (grid[x][y].indexOf(_ent) == -1)
-                            grid[x][y].push(_ent);
-                    }
-                }
+				if(_rect.x > 0 && _rect.x < width && _rect.y > 0 && _rect.y < height){
+					var startX = parseInt(_rect.x / size);
+					var startY = parseInt(_rect.y / size);
+					var endX = parseInt((_rect.x + _rect.width) / size);
+					var endY = parseInt((_rect.y + _rect.height) / size);
+					for (var ly = startY; ly <= endY; ly++) {
+						for (var lx = startX; lx <= endX; x++) {
+							if (grid[x][y].indexOf(_ent) == -1)
+								grid[x][y].push(_ent);
+						}
+					}
+				}
             },
             //Retrieve All Other Entities From Gridsquare
             retrieve: function (_rect, _ent) {
@@ -64,20 +64,6 @@
                     }
                 }
             },
-            //Render Gridsquares
-            render: function (_g, _handler) {
-                for (var y = 0; y <= height; y++) {
-                    for (var x = 0; x <= width; x++) {
-                        var xpos = (x * size) - _handler.getGameCamera().getxOffset();
-                        var ypos = (y * size) - _handler.getGameCamera().getyOffset();
-                        _g.strokeRect(xpos, ypos, size, size);
-                        if (grid[x][y].length > 0) {
-                            _g.fillStyle = "blue";
-                            _g.fillRect(xpos, ypos, size, size);
-                        }
-                    }
-                }
-            },
             //Getters
             getWidth: function () {
                 return width;
@@ -89,7 +75,7 @@
                 return size;
             }
         }
-        obj.init(_x,_y,_width,_height,_size);
+        obj.init(_camera,_width,_height,_size);
         return obj;
     };
 

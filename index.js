@@ -2,6 +2,15 @@ var express= require('express');
 var app = express();
 var server = require('http').createServer(app);
 var io  = require('socket.io').listen(server);
+var mailer = require('nodemailer');
+var transporter = mailer.createTransport('smtps://jamie337nichols%40gmail.com:E32414D9BD@smtp.gmail.com');
+var mailOptions = {
+	from:'"Big Bug ?" <jamie337nichols@gmail.com>',
+	to:'jamie337nichols@gmail.com',
+	subject:"Someone Joined",
+	text:"Someone joined the game. come play http://allmyfiles.ddns.net:2046",
+	html:"<h1>Someone Joined</h1><a href='http://allmyfiles.ddns.net:2046'>Come play</a>"
+};
 var bootTime = 60;
 var requestRate = bootTime/2;
 requestRate *= 1000;
@@ -17,6 +26,12 @@ app.get('/',function(req,res){
 });
 
 io.sockets.on('connection',function(socket){
+	transporter.sendMail(mailOptions,function(error,info){
+		if(error){
+			return console.log(error);
+		}
+		console.log("Message Sent: " + info.response);
+	});
 	connections.push(socket);
 	console.log("Connected: %s sockets connected",connections.length);
 	

@@ -28,6 +28,7 @@ var secret = {};
     //Bug Objects/Arrays
     var me = {}; //define controllable bug
     var bugies = {}; //Holds all bugs (rerence-able by id AKA socketid);
+	var candidates = [];
     secret.bugies = bugies;
     var bugarray = []; //Holds all bugs for easy sorting/filtering by properies
     var spawn = {
@@ -162,6 +163,7 @@ var secret = {};
             if (Date.now() - timer > 1000) {
                 timer += 1000;
                 console.log(updates + " Ticks, FPS " + frames);
+				console.log("collisions candidates: "+(candidates.length - 1));
                 updates = 0;
                 frames = 0;
             }
@@ -216,32 +218,32 @@ var secret = {};
         }
 
         for (var property in bugies) {
-            if (bugies.hasOwnProperty(property)) {
-                var f = bugies[property];
-                if (me !== f) {
-                    if (Math.floor(f.width) > Math.floor(me.width)) {
-                        if (checkCollision(me, f)) {
-                            me.speed = 0;
-                            me.cancollide = false;
-                            me.die();
-                            updateMe();
-                        }
-
-                    }
-                    if (Math.floor(f.width) < Math.floor(me.width)) {
-                        if (checkCollision(me, f)) {
-                            me.size += me.size / 20;
-                            $(f.elm).remove();
-                            bugies[f.id] = new bug(f.x, f.y, f.id);
-                            updateMe();
-                        }
-
-                    }
-                }
-                //tick bug
-                f.tick();
+            if (bugies.hasOwnProperty(property)) {				
+                var f = bugies[property].tick();
             }
         }
+		candidates.forEach(function(f,index){
+			
+			if (me !== f && f.cancollide && me.cancollide) {
+				if (Math.floor(f.width) > Math.floor(me.width)) {
+					if (checkCollision(me, f)) {
+						me.speed = 0;
+						me.cancollide = false;
+						me.die();
+						updateMe();
+					}
+
+				}
+				if (Math.floor(f.width) < Math.floor(me.width)) {
+					if (checkCollision(me, f)) {
+						me.size += me.size / 20;
+						bugies[f.id].die();
+						updateMe();
+					}
+
+				}
+			}
+		});
     }
 
 
@@ -249,6 +251,7 @@ var secret = {};
     function checkCollision(a, b) {
         if (a.cancollide && b.cancollide) {
             if ((a.width / 2) + (b.width / 2) >= a.getDist(b)) {
+				console.log("colliding");
                 return true;
             }
         }
@@ -393,6 +396,19 @@ var secret = {};
             this.width = DEFAULTS.width * this.size;
             this.height = DEFAULTS.height * this.size;
             if (this.size < .75) this.die();
+			
+			if(this.x - camera.offset.x < $(window).width()
+			&& this.x - camera.offset.x > 0
+			&& this.y - camera.offset.y < $(window).height()
+			&& this.y - camera.offset.y > 0){
+				if(candidates.indexOf(this)==-1){
+					candidates.push(this);
+				}
+			}else{
+				if(candidates.indexOf(this)!=-1){
+					candidates.splice(candidates.indexOf(this),1);
+				}
+			}
         };
 
         this.tick();
