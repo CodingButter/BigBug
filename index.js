@@ -16,11 +16,6 @@ var requestRate = bootTime/2;
 requestRate *= 1000;
 bootTime*=1000;
 var bugies = {};
-var candies = {
-	width:2000,
-	height:2000,
-	chunks:{}
-};
 connections = [];
 
 server.listen(process.env.PORT || 2046);
@@ -57,7 +52,8 @@ io.sockets.on('connection',function(socket){
 	});
 	
 	socket.emit('start',bugies);
-	
+
+
 	socket.on('add bugy',function(bug){
 		console.log("buggy added");
 		console.log(bug);
@@ -91,21 +87,6 @@ io.sockets.on('connection',function(socket){
 	
 	socket.on('request update',function(){
 		io.sockets.emit('request update');
-	});
-
-	socket.on('add candy chunk',function(data){
-		var x = parseInt(data.x);
-		var y = parseInt(data.y);
-		if(candies.chunk[data])
-		candies.chunk[x + "," +y] = {};
-		var chunk = candies.chunk[x+","+y];
-		for (i = 0; i < candies.width; i++) {
-			chunk[i] = (typeof chunk[i]!='undefined')?chunk:[];
-			for(b=0;b<candies.height;b++){
-				chunk[i][b] = Math.floor(Math.random()*1.99);
-			}
-		}
-		return chunk;
 	});
 
 	function bootBug(r,f){

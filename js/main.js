@@ -28,7 +28,8 @@ var secret = {};
     //Bug Objects/Arrays
     var me = {}; //define controllable bug
     var bugies = {}; //Holds all bugs (rerence-able by id AKA socketid);
-	var candidates = [];
+	var candys = [];
+    candidates = [];
     secret.bugies = bugies;
     var bugarray = []; //Holds all bugs for easy sorting/filtering by properies
     var spawn = {
@@ -37,6 +38,7 @@ var secret = {};
         width:2000,
         height:2000
     };
+    var candy_size=50;
     //Set up the camera object
     var camera = {
         fps: 30,
@@ -70,6 +72,7 @@ var secret = {};
     socket.on('request update', function() {
         if (me) updateMe();
     });
+
     socket.on('remove bug', function(bugid) {
         removeBug(bugid);
     });
@@ -115,9 +118,18 @@ var secret = {};
         bugarray.push(me);
         socket.emit("add bugy", me);
 
+
         for (var property in server_bugs) {
             if (server_bugs.hasOwnProperty(property)) {
                 addBugy(server_bugs[property]);
+            }
+        }
+
+        for(i=0;i<$(window).width()/candy_size;i++){
+            for(b=0;b<$(window).height()/candy_size;b++){
+                if(Math.random()*2<=.3){
+                    candys.push(new candy(i*candy_size + me.x - camera.center.x,b*candy_size + me.y - camera.center.y,candy_size));
+                }
             }
         }
         run();
@@ -138,6 +150,7 @@ var secret = {};
             updateBug(fdata);
         }
     }
+
 
     function run() {
         running = true;
@@ -172,13 +185,14 @@ var secret = {};
 
         gameLoop();
     }
-
     function render() {
-        for (var property in bugies) {
-            if (bugies.hasOwnProperty(property)) {
-                bugies[property].render();
-            }
-        }
+        candys.forEach(function(c,i){
+            c.render();
+        });
+        me.render();
+        candidates.forEach(function(f,index){
+                f.render();
+        });
         body.css({
             'background-position-x': (-camera.offset.x) + "px",
             'background-position-y': (-camera.offset.y) + "px"
@@ -192,6 +206,7 @@ var secret = {};
     }
 
     function tick() {
+
         camera.offset.x = me.x - camera.center.x;
         camera.offset.y = me.y - camera.center.y;
         bugarray = bugarray.sort(function(a, b) {
@@ -296,8 +311,8 @@ var secret = {};
         });
         this.render = function(){
             this.elm.css({
-                left:this.x - this.offset.x,
-                top:this.y - this.offset.y
+                left:this.x - camera.offset.x,
+                top:this.y - camera.offset.y
             });
         }
     };
