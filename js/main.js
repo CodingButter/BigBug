@@ -163,7 +163,7 @@ var secret = {};
             if (Date.now() - timer > 1000) {
                 timer += 1000;
                 console.log(updates + " Ticks, FPS " + frames);
-				console.log("collisions candidates: "+(candidates.length - 1));
+				console.log("collisions candidates: "+candidates.length);
                 updates = 0;
                 frames = 0;
             }
