@@ -280,15 +280,37 @@ var secret = {};
     }
 
 
+    //Candy Class
+    var candy = function(_x,_y){
+        this.elm = $('<div class="dot"></div>');
+        var cntr = $('<div class="dot_center"><div class="dot_shadow"></div></div>');
+        this.elm.append(cntr);
+        dirt.append(this.elm);
+        this.x = _x;
+        this.y = _y;
+        this.width = 50;
+        this.height= 50;
+        this.elm.css({
+            width:this.width+"px",
+            height:this.height+"px"
+        });
+        this.render = function(){
+            this.elm.css({
+                left:this.x - this.offset.x,
+                top:this.y - this.offset.y
+            });
+        }
+    };
+
     //Bug Class
-    var bug = function(_x, _y, _id, _name) {
+    var bug = function (_x, _y, _id, _name) {
         bugies[_id] = this;
         var T = this;
         this.x = _x;
         this.y = _y;
         this.id = _id;
         this.name = _name || this.name;
-        this.set = function() {
+        this.set = function () {
             this.shrinkrate = .99999;
             this.speed = 0;
             this.rotRate = 2.5;
@@ -304,7 +326,7 @@ var secret = {};
             this.width = DEFAULTS.width;
             this.height = DEFAULTS.height;
             this.cancollide = false;
-            setTimeout(function() {
+            setTimeout(function () {
                 T.cancollide = true;
                 updateMe();
             }, 10000);
@@ -312,7 +334,7 @@ var secret = {};
         };
         this.set();
         this.elm = $("<div class='bugy'/>");
-        this.elm.on("click", function(e) {
+        this.elm.on("click", function (e) {
             if (T == me) {
                 if (T.inp && e.target != T.inp) {
                     T.name = T.inp.val();
@@ -320,7 +342,7 @@ var secret = {};
                     delete T.inp;
                 } else {
                     T.inp = $("<input type='text' class='name' placeholder='bug name'/>");
-                    T.inp.on('keydown', function(e) {
+                    T.inp.on('keydown', function (e) {
                         if (e.which == enter) {
                             T.name = $(this).val();
                             this.remove();
@@ -340,18 +362,18 @@ var secret = {};
         this.elm.append(this.skin);
         dirt.append(this.elm);
 
-        this.getDir = function() {
+        this.getDir = function () {
             return Math.atan2(this.accelY, this.accelX) * 180 / Math.PI;
         };
 
 
-        this.die = function() {
+        this.die = function () {
             if (this == me) {
                 this.set();
             }
         };
         //main render
-        this.render = function() {
+        this.render = function () {
             $("title").html("Big Bug " + bugarray.length);
             if (this.name != '') this.nametip.show();
             else this.nametip.hide();
@@ -383,7 +405,7 @@ var secret = {};
         };
 
         //main tick
-        this.tick = function() {
+        this.tick = function () {
             this.rotation += this.rotspeed;
             this.speed = (Math.abs(this.speed) < this.maxspeed) ? this.speed + this.accel : this.speed;
             this.speed *= this.friction;
@@ -396,29 +418,29 @@ var secret = {};
             this.width = DEFAULTS.width * this.size;
             this.height = DEFAULTS.height * this.size;
             if (this.size < .75) this.die();
-			
-			if(this.x - camera.offset.x < $(window).width()
-			&& this.x - camera.offset.x > 0
-			&& this.y - camera.offset.y < $(window).height()
-			&& this.y - camera.offset.y > 0){
-				if(candidates.indexOf(this)==-1){
-					candidates.push(this);
-				}
-			}else{
-				if(candidates.indexOf(this)!=-1){
-					candidates.splice(candidates.indexOf(this),1);
-				}
-			}
+
+            if (this.x - camera.offset.x < $(window).width()
+                && this.x - camera.offset.x > 0
+                && this.y - camera.offset.y < $(window).height()
+                && this.y - camera.offset.y > 0) {
+                if (candidates.indexOf(this) == -1 && this != me) {
+                    candidates.push(this);
+                }
+            } else {
+                if (candidates.indexOf(this) != -1 && this != me) {
+                    candidates.splice(candidates.indexOf(this), 1);
+                }
+            }
         };
 
         this.tick();
         this.render();
 
-        this.getDist = function(ent) {
+        this.getDist = function (ent) {
             var distx = this.x - ent.x;
             var disty = this.y - ent.y;
             return Math.sqrt(distx * distx + disty * disty);
-        }
+        };
 
         console.log(this);
     };

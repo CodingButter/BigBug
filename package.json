@@ -1,11 +1,25 @@
 {
-  "name": "bigfish",
+  "name": "bigbug",
   "version": "1.0.0",
-  "description": "",
+  "description": "buggy game",
   "main": "index.js",
+  "dependencies": {
+    "express": "^4.14.0",
+    "nodemailer": "^2.6.0",
+    "socketio": "^1.0.0"
+  },
+  "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jleelove/BigBug.git"
+  },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jleelove/BigBug/issues"
+  },
+  "homepage": "https://github.com/jleelove/BigBug#readme"
 }
