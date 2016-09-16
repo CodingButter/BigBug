@@ -11,7 +11,7 @@ var mailOptions = {
 	text:"Someone joined the game. come play http://allmyfiles.ddns.net:2046",
 	html:"<h1>Someone Joined</h1><a href='http://allmyfiles.ddns.net:2046'>Come play</a>"
 };
-var bootTime = 60;
+var bootTime = 300;
 var requestRate = bootTime/2;
 requestRate *= 1000;
 bootTime*=1000;

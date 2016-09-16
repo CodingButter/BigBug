@@ -21,6 +21,7 @@ var secret = {};
 
     //Dom
     var dirt = $("#dirt");
+
     var msg = $("#msg");
     var body = $("body");
     var ranking = $("#ranking");
@@ -29,7 +30,9 @@ var secret = {};
     var me = {}; //define controllable bug
     var bugies = {}; //Holds all bugs (rerence-able by id AKA socketid);
 	var candys = [];
+	var numOfCandies = 10;
     candidates = [];
+	var frameID;
     secret.bugies = bugies;
     var bugarray = []; //Holds all bugs for easy sorting/filtering by properies
     var spawn = {
@@ -42,13 +45,15 @@ var secret = {};
     //Set up the camera object
     var camera = {
         fps: 30,
+		width:$(window).width(),
+		height:$(window).height(),
         offset: {
             x: 0,
             y: 0
         }, //This offset will be used to position everything on the screen
         center: {
-            x: $(window).width() / 2,
-            y: $(window).height() / 2
+            x: this.width / 2,
+            y: this.height / 2
         } //this will position the current player bug(me)
     };
 
@@ -62,6 +67,8 @@ var secret = {};
         height: 100
     };
 
+	
+	
     //SOCKET STUFF
     var socket = io.connect();
     secret.s = socket;
@@ -89,10 +96,10 @@ var secret = {};
         socket.emit('request update');
     }
 
-    $(window).on('beforeunload', function() {
+    dirt.on('beforeunload', function() {
         return "Come Back Soon";
     });
-    $(window).unload(function() {
+    dirt.unload(function() {
         socket.disconnect();
         return "Bye";
     });
@@ -106,14 +113,21 @@ var secret = {};
         me = {};
         $(".entity").remove();
     }
-
     /*
      * End Socket Stuffs
      */
+	 
+$(window).resize(function(){
+	camera.width = $(window).width();
+	camera.height = $(window).height();
+})
 
     function init(server_bugs) {
+		camera.center.x = $(window).width()/2;
+		camera.center.y = $(window).height()/2;
         me = new bug(spawn.x - spawn.width + Math.random() * (spawn.width * 2), spawn.y - spawn.height + Math.random() * (spawn.height * 2), socket.id,"Guest Buggy");
-        me.elm.addClass("me");
+     
+		me.elm.addClass("me");
         secret.me = me;
         bugarray.push(me);
         socket.emit("add bugy", me);
@@ -125,12 +139,8 @@ var secret = {};
             }
         }
 
-        for(i=0;i<$(window).width()/candy_size;i++){
-            for(b=0;b<$(window).height()/candy_size;b++){
-                if(Math.random()*2<=.3){
-                    candys.push(new candy(i*candy_size + me.x - camera.center.x,b*candy_size + me.y - camera.center.y,candy_size));
-                }
-            }
+        for(i=0;i<numOfCandies;i++){
+                    candys.push(new candy(Math.random()*camera.width,Math.random() * camera.height,candy_size,candy_size));
         }
         run();
     }
@@ -153,43 +163,61 @@ var secret = {};
 
 
     function run() {
-        running = true;
-        var lastTime = Date.now();
-        var now = Date.now();
-        var ns = 1000 / camera.fps;
-        var delta = 0;
-        var updates = 0;
-        var frames = 0;
-        var timer = Date.now();
+		var delta = 0;
+		var lastFrameTimeMs = 0;
+		var lastFpsUpdate = 0;
+		var framesThisSecond = 0;
+		var fps = camera.fps;
+		var timestep = 1000 / fps;
+		frameID = requestAnimationFrame(function(timestamp) {
+            running = true;
+            lastFrameTimeMs = timestamp;
+            lastFpsUpdate = timestamp;
+            framesThisSecond = 0;
+            frameID = requestAnimationFrame(mainLoop);
+        });
+		
+		
+		function mainLoop(timestamp) {
+			// Throttle the frame rate.    
+			if (timestamp < lastFrameTimeMs + (1000 / fps)) {
+				frameID = requestAnimationFrame(mainLoop);
+				return;
+			}
+			delta += timestamp - lastFrameTimeMs;
+			lastFrameTimeMs = timestamp;
 
-        function gameLoop() {
-            now = Date.now();
-            delta += (now - lastTime) / ns;
-            lastTime = now;
-            if (delta >= 1) {
-                tick();
-                updates++;
-                delta--;
-            }
-            render();
-            frames++;
-            if (Date.now() - timer > 1000) {
-                timer += 1000;
-                console.log(updates + " Ticks, FPS " + frames);
-				console.log("collisions candidates: "+candidates.length);
-                updates = 0;
-                frames = 0;
-            }
-            window.requestAnimationFrame(gameLoop);
-        }
 
-        gameLoop();
+			if (timestamp > lastFpsUpdate + 1000) {
+				fps = 0.25 * framesThisSecond + 0.75 * fps;
+
+				lastFpsUpdate = timestamp;
+				framesThisSecond = 0;
+			}
+			framesThisSecond++;
+
+			var numUpdateSteps = 0;
+			while (delta >= timestep) {
+				tick(timestep);
+				delta -= timestep;
+				if (++numUpdateSteps >= 240) {
+					panic();
+					break;
+				}
+			}
+			render();
+			frameID = requestAnimationFrame(mainLoop);
+		}
+		function panic() {
+			delta = 0; 
+		}
     }
+	
     function render() {
         candys.forEach(function(c,i){
             c.render();
         });
-        me.render();
+		me.render();
         candidates.forEach(function(f,index){
                 f.render();
         });
@@ -205,10 +233,20 @@ var secret = {};
         ranking.html(ranklist);
     }
 
-    function tick() {
-
+    function tick(dt) {
         camera.offset.x = me.x - camera.center.x;
         camera.offset.y = me.y - camera.center.y;
+		candys.forEach(function(c,i){
+            c.tick(dt);
+			if (checkCollision(me, c)) {
+				me.size+=.01;
+				var moveAng = Math.random()*(Math.PI*2);
+				c.x = Math.random()* camera.width
+				c.y = Math.random() * camera.height;
+			}
+
+			
+        });
         bugarray = bugarray.sort(function(a, b) {
             if (a.size > b.size) {
                 return -1;
@@ -234,7 +272,7 @@ var secret = {};
 
         for (var property in bugies) {
             if (bugies.hasOwnProperty(property)) {				
-                var f = bugies[property].tick();
+                var f = bugies[property].tick(dt);
             }
         }
 		candidates.forEach(function(f,index){
@@ -264,9 +302,8 @@ var secret = {};
 
     //Check collissions
     function checkCollision(a, b) {
-        if (a.cancollide && b.cancollide) {
+        if (a.cancollide && b.cancollide || b.type == "candy") {
             if ((a.width / 2) + (b.width / 2) >= a.getDist(b)) {
-				console.log("colliding");
                 return true;
             }
         }
@@ -297,6 +334,7 @@ var secret = {};
 
     //Candy Class
     var candy = function(_x,_y){
+		this.type ="candy";
         this.elm = $('<div class="dot"></div>');
         var cntr = $('<div class="dot_center"><div class="dot_shadow"></div></div>');
         this.elm.append(cntr);
@@ -312,31 +350,55 @@ var secret = {};
         this.render = function(){
             this.elm.css({
                 left:this.x - camera.offset.x,
-                top:this.y - camera.offset.y
+                top:this.y - camera.offset.y,
+				marginLeft: "-" + (this.width / 2) + "px",
+                marginTop: "-" + (this.width / 2) + "px",
             });
         }
+		this.tick = function(dt){
+			
+			if(this.x - camera.offset.x < -this.width){
+				this.x += camera.width + (this.width*2);
+				this.y += -this.height + Math.random() * (this.height * 2);
+			}
+			if(this.x - camera.offset.x > camera.width + this.width){
+				this.x -= camera.width + (this.width*2);
+				this.y += -this.height + Math.random() * (this.height * 2);
+			}
+			if(this.y - camera.offset.y < -this.height){
+				this.y += camera.height + (this.height*2);
+				this.x += -this.width + Math.random() * (this.width * 2);
+			}
+			if(this.y - camera.offset.y > camera.height + this.height){
+				this.y -= camera.height + (this.height*2);
+				this.x += -this.width + Math.random() * (this.width * 2);
+			}
+			
+		}
     };
 
     //Bug Class
     var bug = function (_x, _y, _id, _name) {
         bugies[_id] = this;
+		this.type="bug";
         var T = this;
         this.x = _x;
         this.y = _y;
         this.id = _id;
         this.name = _name || this.name;
+		this.rotation = 0;
         this.set = function () {
-            this.shrinkrate = .99999;
+            this.shrinkrate = .9999;
             this.speed = 0;
-            this.rotRate = 2.5;
-            this.rotRate = 2.5;
-            this.friction = 0;
+            this.rotRate = .1;
+            this.friction = 1;
             this.frictionAmt = .97;
-            this.rotation = 0;
             this.rotspeed = 0;
             this.accel = 0;
-            this.accelRate = 0.5;
-            this.maxspeed = 15;
+            this.accelRate = .03;
+            this.maxspeed = .4;
+			this.maxsize = 2.5;
+			this.moveDir = 0;
             this.size = 1;
             this.width = DEFAULTS.width;
             this.height = DEFAULTS.height;
@@ -368,7 +430,7 @@ var secret = {};
                 }
             }
         });
-
+		
         this.elm.addClass("entity");
         this.elm.attr("title", this.id);
         this.nametip = $("<div class='name'/>");
@@ -415,41 +477,41 @@ var secret = {};
                 backgroundImage: bg,
                 backgroundSize: "100%"
             });
-            camera.center.x = $(window).width() / 2;
-            camera.center.y = $(window).height() / 2;
+            camera.center.x = camera.width / 2;
+            camera.center.y = camera.height / 2;
         };
 
         //main tick
-        this.tick = function () {
-            this.rotation += this.rotspeed;
+        this.tick = function (dt) {
+            this.rotation += this.rotspeed * dt;
+			this.size = (Math.abs(this.maxsize)>this.size)?this.size:this.maxSize;
             this.speed = (Math.abs(this.speed) < this.maxspeed) ? this.speed + this.accel : this.speed;
             this.speed *= this.friction;
             this.nametip.html(this.name);
-            this.x += Math.cos(this.rotation * (Math.PI / 180)) * this.speed;
-            this.y += Math.sin(this.rotation * (Math.PI / 180)) * this.speed;
-
+			this.moveDir -= (this.moveDir - this.rotation)/20;
+            this.x +=(Math.cos(this.moveDir* (Math.PI / 180)) * this.speed) * dt;
+            this.y += (Math.sin(this.moveDir * (Math.PI / 180)) * this.speed) * dt;
             this.size *= this.shrinkrate;
-            this.size += this.accel / 60000;
+           // this.size += (this.accel / 60000) * dt;
             this.width = DEFAULTS.width * this.size;
             this.height = DEFAULTS.height * this.size;
             if (this.size < .75) this.die();
 
-            if (this.x - camera.offset.x < $(window).width()
+            if (this.x - camera.offset.x < camera.width
                 && this.x - camera.offset.x > 0
-                && this.y - camera.offset.y < $(window).height()
+                && this.y - camera.offset.y < camera.height
                 && this.y - camera.offset.y > 0) {
-                if (candidates.indexOf(this) == -1 && this != me) {
+                if (candidates.indexOf(this) == -1 && this !== me) {
                     candidates.push(this);
+					this.elm.show();
                 }
             } else {
-                if (candidates.indexOf(this) != -1 && this != me) {
+                if (candidates.indexOf(this) != -1 && this !== me) {
                     candidates.splice(candidates.indexOf(this), 1);
+					this.elm.hide();
                 }
             }
         };
-
-        this.tick();
-        this.render();
 
         this.getDist = function (ent) {
             var distx = this.x - ent.x;
@@ -457,7 +519,6 @@ var secret = {};
             return Math.sqrt(distx * distx + disty * disty);
         };
 
-        console.log(this);
     };
 
     function getAngle(a, b) {
@@ -494,5 +555,7 @@ var secret = {};
         if (keys[up] != true && keys[down] != true && keys[w] != true && keys[s] != true) me.friction = me.frictionAmt;
         updateMe();
     }, 1);
+
+	
 
 })();
