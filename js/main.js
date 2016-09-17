@@ -67,8 +67,14 @@ var secret = {};
         height: 100
     };
 
-	
-	
+	var sounds = {
+        pop:$("#pop")[0]
+    };
+    $(document).ready(function() {
+        $("#music")[0].volume = 0.1;
+        $("#pop")[0].volume = 0.15;
+        $("#music")[0].play();
+    });
     //SOCKET STUFF
     var socket = io.connect();
     secret.s = socket;
@@ -120,7 +126,7 @@ var secret = {};
 $(window).resize(function(){
 	camera.width = $(window).width();
 	camera.height = $(window).height();
-})
+});
 
     function init(server_bugs) {
 		camera.center.x = $(window).width()/2;
@@ -243,6 +249,8 @@ $(window).resize(function(){
 				var moveAng = Math.random()*(Math.PI*2);
 				c.x = Math.random()* camera.width
 				c.y = Math.random() * camera.height;
+                console.log(sounds.pop);
+                sounds.pop.play();
 			}
 
 			
