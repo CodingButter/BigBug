@@ -557,6 +557,7 @@ $(window).resize(function(){
     function touchStart(e){
         me.rotation = e.degs;
         me.accel = me.accelRate * e.power;
+        me.friction = 1;
         updateMe();
     }
     function touchMove(e){
@@ -566,6 +567,7 @@ $(window).resize(function(){
     }
     function touchEnd(e){
         me.accel = 0;
+        me.friction = me.frictionAmt;
         updateMe();
   }
     //PC CONTROLS
