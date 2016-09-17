@@ -505,7 +505,9 @@ $(window).resize(function(){
             this.speed = (Math.abs(this.speed) < this.maxspeed) ? this.speed + this.accel : this.speed;
             this.speed *= this.friction;
             this.nametip.html(this.name);
-			this.moveDir -= (this.moveDir - this.rotation)/20;
+            if(Math.abs(this.moveDir - this.rotation) > 150)this.moveDir -= 360 * (this.moveDir/Math.abs(this.moveDir));
+			this.moveDir -=(this.moveDir - this.rotation)/20;
+
             this.x +=(Math.cos(this.moveDir* (Math.PI / 180)) * this.speed) * dt;
             this.y += (Math.sin(this.moveDir * (Math.PI / 180)) * this.speed) * dt;
             this.size *= this.shrinkrate;
