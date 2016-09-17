@@ -142,6 +142,6 @@ div#msg {
     display:none;
 }
 div#tpad_1 {
-    bottom: 150px;
+    bottom: -75px;
     left: 50%;
 }

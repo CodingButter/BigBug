@@ -404,6 +404,7 @@ $(window).resize(function(){
         this.id = _id;
         this.name = _name || this.name;
 		this.rotation = 0;
+		this.drift = 8;
         this.set = function () {
             this.shrinkrate = .9999;
             this.speed = 0;
@@ -506,7 +507,7 @@ $(window).resize(function(){
             this.speed *= this.friction;
             this.nametip.html(this.name);
             if(Math.abs(this.moveDir - this.rotation) > 150)this.moveDir -= 360 * (this.moveDir/Math.abs(this.moveDir));
-			this.moveDir -=(this.moveDir - this.rotation)/20;
+			this.moveDir -=(this.moveDir - this.rotation)/this.drift;
 
             this.x +=(Math.cos(this.moveDir* (Math.PI / 180)) * this.speed) * dt;
             this.y += (Math.sin(this.moveDir * (Math.PI / 180)) * this.speed) * dt;
