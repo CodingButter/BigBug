@@ -34,7 +34,9 @@ var secret = {};
     candidates = [];
 	var frameID;
     secret.bugies = bugies;
+    var mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry/i.test(navigator.userAgent);
     var bugarray = []; //Holds all bugs for easy sorting/filtering by properies
+    var touchpad;
     var spawn = {
         x:10000,
         y:10000,
@@ -83,7 +85,7 @@ var secret = {};
     socket.on('bugy added', addBugy);
     socket.on('update a bug', updateBug);
     socket.on('request update', function() {
-        if (me) updateMe();
+        if (me)updateMe();
     });
 
     socket.on('remove bug', function(bugid) {
@@ -129,6 +131,7 @@ $(window).resize(function(){
 });
 
     function init(server_bugs) {
+
 		camera.center.x = $(window).width()/2;
 		camera.center.y = $(window).height()/2;
         me = new bug(spawn.x - spawn.width + Math.random() * (spawn.width * 2), spawn.y - spawn.height + Math.random() * (spawn.height * 2), socket.id,"Guest Buggy");
@@ -148,8 +151,14 @@ $(window).resize(function(){
         for(i=0;i<numOfCandies;i++){
                     candys.push(new candy(Math.random()*camera.width,Math.random() * camera.height,candy_size,candy_size));
         }
+
+        if(mobile){
+            touchpad = new TouchPad({pot:{radius:150,theme:"simple"},stick:{theme:"simple"},cb:{start:touchStart,move:touchMove,end:touchEnd}});
+        }
+
         run();
     }
+
 
     function removeBug(bugid) {
         if (bugid != me.id) {
@@ -491,7 +500,7 @@ $(window).resize(function(){
 
         //main tick
         this.tick = function (dt) {
-            this.rotation += this.rotspeed * dt;
+            if(this!== me || !mobile)this.rotation += this.rotspeed * dt;
 			this.size = (Math.abs(this.maxsize)>this.size)?this.size:this.maxSize;
             this.speed = (Math.abs(this.speed) < this.maxspeed) ? this.speed + this.accel : this.speed;
             this.speed *= this.friction;
@@ -542,7 +551,21 @@ $(window).resize(function(){
     /*
      * CONTROLS
      */
-
+    //TouchPad Controls
+    function touchStart(e){
+        me.rotation = e.degs;
+        me.accel = me.accelRate * e.power;
+        updateMe();
+    }
+    function touchMove(e){
+        me.rotation = e.degs;
+        me.accel = me.accelRate * e.power;
+        updateMe();
+    }
+    function touchEnd(e){
+        me.accel = 0;
+        updateMe();
+  }
     //PC CONTROLS
     document.addEventListener('keydown', function(e) {
         if (keys[e.which] != true) {
@@ -563,7 +586,5 @@ $(window).resize(function(){
         if (keys[up] != true && keys[down] != true && keys[w] != true && keys[s] != true) me.friction = me.frictionAmt;
         updateMe();
     }, 1);
-
-	
 
 })();

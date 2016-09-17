@@ -141,3 +141,7 @@ div#msg {
 .sound {
     display:none;
 }
+div#tpad_1 {
+    bottom: 150px;
+    left: 50%;
+}
